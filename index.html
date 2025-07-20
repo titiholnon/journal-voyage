@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Carte de Voyages</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .map-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        #map {
+            height: 70vh;
+            min-height: 500px;
+            width: 100%;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #eee;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn.danger:hover {
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .input {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: -10px;
+        }
+
+        .close:hover {
+            color: #667eea;
+        }
+
+        .travel-list {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            color: white;
+        }
+
+        .travel-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .travel-info h4 {
+            margin-bottom: 5px;
+        }
+
+        .travel-info p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                justify-content: center;
+            }
+            
+            .btn {
+                flex: 1;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Ma Carte de Voyages</h1>
+            <p>Cliquez sur la carte pour ajouter vos destinations</p>
+        </div>
+
+        <div class="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number" id="totalTrips">0</span>
+                    <span class="stat-label">Voyages</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="totalCountries">0</span>
+                    <span class="stat-label">Pays</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="totalContinents">0</span>
+                    <span class="stat-label">Continents</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <input type="text" id="searchLocation" class="input" placeholder="Rechercher un lieu...">
+                    <button class="btn" onclick="searchLocation()">🔍 Rechercher</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" onclick="exportData()">💾 Exporter</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+                    <button class="btn" onclick="document.getElementById('importFile').click()">📁 Importer</button>
+                    <button class="btn danger" onclick="clearAllMarkers()">🗑️ Effacer tout</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="travel-list">
+            <h3>📝 Mes Voyages</h3>
+            <div id="travelList"></div>
+        </div>
+    </div>
+
+    <!-- Modal pour ajouter un voyage -->
+    <div id="travelModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>✈️ Ajouter un voyage</h3>
+            <form id="travelForm">
+                <div class="form-group">
+                    <label for="travelTitle">Titre du voyage :</label>
+                    <input type="text" id="travelTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="travelDate">Date :</label>
+                    <input type="date" id="travelDate">
+                </div>
+                <div class="form-group">
+                    <label for="travelType">Type de voyage :</label>
+                    <select id="travelType">
+                        <option value="vacances">🏖️ Vacances</option>
+                        <option value="travail">💼 Travail</option>
+                        <option value="famille">👨‍👩‍👧‍👦 Famille</option>
+                        <option value="aventure">🎒 Aventure</option>
+                        <option value="culture">🏛️ Culture</option>
+                        <option value="autre">🌟 Autre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="travelNotes">Notes :</label>
+                    <textarea id="travelNotes" placeholder="Vos souvenirs, recommandations..."></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">✅ Ajouter le voyage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Variables globales
+        let map;
+        let travels = [];
+        let currentMarker = null;
+        let tempLatLng = null;
+
+        // Icons personnalisés pour différents types de voyages
+        const icons = {
+            vacances: '🏖️',
+            travail: '💼',
+            famille: '👨‍👩‍👧‍👦',
+            aventure: '🎒',
+            culture: '🏛️',
+            autre: '🌟'
+        };
+
+        // Initialisation de la carte
+        function initMap() {
+            map = L.map('map').setView([20, 0], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+
+            // Événement de clic sur la carte
+            map.on('click', function(e) {
+                tempLatLng = e.latlng;
+                openModal();
+            });
+
+            // Charger les données sauvegardées
+            loadTravels();
+        }
+
+        // Ouvrir le modal
+        function openModal() {
+            document.getElementById('travelModal').style.display = 'block';
+            document.getElementById('travelForm').reset();
+        }
+
+        // Fermer le modal
+        function closeModal() {
+            document.getElementById('travelModal').style.display = 'none';
+            tempLatLng = null;
+        }
+
+        // Ajouter un voyage
+        document.getElementById('travelForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const travel = {
+                id: Date.now(),
+                title: document.getElementById('travelTitle').value,
+                date: document.getElementById('travelDate').value,
+                type: document.getElementById('travelType').value,
+                notes: document.getElementById('travelNotes').value,
+                lat: tempLatLng.lat,
+                lng: tempLatLng.lng,
+                timestamp: new Date().toISOString()
+            };
+
+            travels.push(travel);
+            addMarkerToMap(travel);
+            updateStats();
+            updateTravelList();
+            saveTravels();
+            closeModal();
+        });
+
+        // Ajouter un marqueur sur la carte
+        function addMarkerToMap(travel) {
+            const icon = icons[travel.type] || '📍';
+            
+            const marker = L.marker([travel.lat, travel.lng]).addTo(map);
+            
+            const popupContent = `
+                <div style="min-width: 200px;">
+                    <h4>${icon} ${travel.title}</h4>
+                    <p><strong>Date:</strong> ${travel.date || 'Non spécifiée'}</p>
+                    <p><strong>Type:</strong> ${travel.type}</p>
+                    ${travel.notes ? `<p><strong>Notes:</strong> ${travel.notes}</p>` : ''}
+                    <button onclick="deleteTravel(${travel.id})" style="background: #ff6b6b; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px;">🗑️ Supprimer</button>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            travel.marker = marker;
+        }
+
+        // Supprimer un voyage
+        function deleteTravel(id) {
+            const travelIndex = travels.findIndex(t => t.id === id);
+            if (travelIndex > -1) {
+                const travel = travels[travelIndex];
+                if (travel.marker) {
+                    map.removeLayer(travel.marker);
+                }
+                travels.splice(travelIndex, 1);
+                updateStats();
+                updateTravelList();
+                saveTravels();
+            }
+        }
+
+        // Mettre à jour les statistiques
+        function updateStats() {
+            document.getElementById('totalTrips').textContent = travels.length;
+            
+            const countries = new Set();
+            const continents = new Set();
+            
+            travels.forEach(travel => {
+                // Estimation simple des continents basée sur les coordonnées
+                const lat = travel.lat;
+                const lng = travel.lng;
+                
+                if (lat > 35 && lng > -10 && lng < 70) continents.add('Europe');
+                else if (lat > 10 && lng > 60 && lng < 150) continents.add('Asie');
+                else if (lat > -40 && lng > -20 && lng < 60) continents.add('Afrique');
+                else if (lat > 15 && lng > -170 && lng < -50) continents.add('Amérique du Nord');
+                else if (lat < 15 && lng > -90 && lng < -30) continents.add('Amérique du Sud');
+                else if (lat < -10 && lng > 110 && lng < 180) continents.add('Océanie');
+                
+                countries.add(`${lat.toFixed(1)},${lng.toFixed(1)}`); // Approximation
+            });
+            
+            document.getElementById('totalCountries').textContent = countries.size;
+            document.getElementById('totalContinents').textContent = continents.size;
+        }
+
+        // Mettre à jour la liste des voyages
+        function updateTravelList() {
+            const listContainer = document.getElementById('travelList');
+            listContainer.innerHTML = '';
+            
+            if (travels.length === 0) {
+                listContainer.innerHTML = '<p style="opacity: 0.7;">Aucun voyage ajouté pour le moment.</p>';
+                return;
+            }
+            
+            const sortedTravels = travels.sort((a, b) => new Date(b.date || b.timestamp) - new Date(a.date || a.timestamp));
+            
+            sortedTravels.forEach(travel => {
+                const icon = icons[travel.type] || '📍';
+                const travelElement = document.createElement('div');
+                travelElement.className = 'travel-item';
+                travelElement.innerHTML = `
+                    <div class="travel-info">
+                        <h4>${icon} ${travel.title}</h4>
+                        <p>${travel.date || 'Date non spécifiée'} • ${travel.type}</p>
+                        ${travel.notes ? `<p style="font-size: 0.8rem; margin-top: 5px;">${travel.notes}</p>` : ''}
+                    </div>
+                    <button class="btn danger" onclick="deleteTravel(${travel.id})" style="padding: 8px 12px;">🗑️</button>
+                `;
+                listContainer.appendChild(travelElement);
+            });
+        }
+
+        // Rechercher un lieu
+        async function searchLocation() {
+            const query = document.getElementById('searchLocation').value;
+            if (!query) return;
+            
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+                
+                if (results.length > 0) {
+                    const result = results[0];
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    
+                    map.setView([lat, lng], 10);
+                    
+                    tempLatLng = { lat, lng };
+                    openModal();
+                    document.getElementById('travelTitle').value = result.display_name.split(',')[0];
+                } else {
+                    alert('Lieu non trouvé. Essayez avec un autre nom.');
+                }
+            } catch (error) {
+                alert('Erreur lors de la recherche. Vérifiez votre connexion internet.');
+            }
+        }
+
+        // Effacer tous les marqueurs
+        function clearAllMarkers() {
+            if (confirm('Êtes-vous sûr de vouloir supprimer tous vos voyages ?')) {
+                travels.forEach(travel => {
+                    if (travel.marker) {
+                        map.removeLayer(travel.marker);
+                    }
+                });
+                travels = [];
+                updateStats();
+                updateTravelList();
+                saveTravels();
+            }
+        }
+
+        // Sauvegarder les voyages
+        function saveTravels() {
+            const travelsData = travels.map(travel => ({
+                id: travel.id,
+                title: travel.title,
+                date: travel.date,
+                type: travel.type,
+                notes: travel.notes,
+                lat: travel.lat,
+                lng: travel.lng,
+                timestamp: travel.timestamp
+            }));
+            localStorage.setItem('travels', JSON.stringify(travelsData));
+        }
+
+        // Charger les voyages
+        function loadTravels() {
+            const saved = localStorage.getItem('travels');
+            if (saved) {
+                travels = JSON.parse(saved);
+                travels.forEach(travel => {
+                    addMarkerToMap(travel);
+                });
+                updateStats();
+                updateTravelList();
+            }
+        }
+
+        // Exporter les données
+        function exportData() {
+            const dataStr = JSON.stringify(travels, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `mes-voyages-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+
+        // Importer les données
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedTravels = JSON.parse(e.target.result);
+                    
+                    // Effacer les voyages existants
+                    travels.forEach(travel => {
+                        if (travel.marker) {
+                            map.removeLayer(travel.marker);
+                        }
+                    });
+                    
+                    travels = importedTravels;
+                    travels.forEach(travel => {
+                        addMarkerToMap(travel);
+                    });
+                    
+                    updateStats();
+                    updateTravelList();
+                    saveTravels();
+                    
+                    alert('Données importées avec succès !');
+                } catch (error) {
+                    alert('Erreur lors de l\'importation du fichier.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Fermer le modal en cliquant à l'extérieur
+        window.onclick = function(event) {
+            const modal = document.getElementById('travelModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Initialiser la carte au chargement de la page
+        window.onload = initMap;
+    </script>
+</body>
+</html>
